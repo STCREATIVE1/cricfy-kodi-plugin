@@ -1,48 +1,88 @@
-import requests
+import os
 import json
-import re
+import requests
+import base64
 from pathlib import Path
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 
-DATA_JSON_FILE_PATH = Path(__file__).resolve().parent / 'data.json'
-SPORTZX_API_URL = "https://sportzx.cc/wp-json/wp/v2/pages?slug=sportzx-live&_fields=content.rendered"
+# Paths
+CURRENT_DIR = Path(__file__).resolve().parent
+DATA_JSON_FILE_PATH = CURRENT_DIR / 'data.json'
 
-def extract_sportzx_data():
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    
+# URLs
+CRICFY_BASE = "https://cfyhskssnn99.top"
+SPORTZX_API = "https://sportzx.cc/wp-admin/admin-ajax.php?action=vsc_matches"
+
+def decrypt_cricfy(encrypted_base64, secrets):
     try:
-        response = requests.get(SPORTZX_API_URL, headers=headers)
-        if response.status_code == 200:
-            raw_data = response.json()
-            # Content nikalna (Pehla result kyunki slug unique hota hai)
-            html_content = raw_data[0]['content']['rendered']
-            
-            # M3U8 links dhoondhne ke liye Regex use karein
-            m3u8_links = re.findall(r'(https?://[^\s\'"]+\.m3u8)', html_content)
-            
-            # Match titles nikalne ka logic (Ye HTML structure par depend karega)
-            # Example: Agar match name <h3> mein hai
-            titles = re.findall(r'<h3>(.*?)</h3>', html_content)
+        clean_data = encrypted_base64.strip().replace("\n", "").replace("\r", "").replace(" ", "")
+        ciphertext = base64.b64decode(clean_data)
+        for secret in secrets:
+            if not secret or ":" not in secret: continue
+            try:
+                key_hex, iv_hex = secret.split(":")
+                cipher = AES.new(bytes.fromhex(key_hex), AES.MODE_CBC, bytes.fromhex(iv_hex))
+                decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
+                text = decrypted.decode('utf-8')
+                if text.startswith("{") or text.startswith("["): return text
+            except: continue
+        return None
+    except: return None
 
-            live_channels = []
-            for i in range(min(len(titles), len(m3u8_links))):
-                live_channels.append({
-                    "name": titles[i].strip(),
-                    "url": m3u8_links[i],
-                    "category": "Live Sports",
-                    "poster": "https://sportzx.cc/default-poster.png"
-                })
+def main():
+    secrets = [os.getenv('CRICFY_SECRET1'), os.getenv('CRICFY_SECRET2')]
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    combined_channels = []
 
-            # data.json mein save karein
-            with open(DATA_JSON_FILE_PATH, 'w', encoding='utf-8') as f:
-                json.dump({"channels": live_channels}, f, indent=4, ensure_ascii=False)
-            
-            print(f"Sportzx se {len(live_channels)} matches extract ho gaye!")
-            
-    except Exception as e:
-        print(f"Sportzx Fetch Error: {e}")
+    # --- PART 1: Fetch Cricfy Data ---
+    print("Fetching Cricfy Events...")
+    try:
+        c_res = requests.get(f"{CRICFY_BASE}/api/live_events", headers=headers, timeout=10)
+        if c_res.status_code == 200:
+            for ev in c_res.json():
+                slug = ev.get('slug')
+                ch_txt = requests.get(f"{CRICFY_BASE}/channels/{slug.lower()}.txt", headers=headers).text
+                decrypted = decrypt_cricfy(ch_txt, secrets)
+                if decrypted:
+                    streams = json.loads(decrypted).get('streamUrls', [])
+                    if streams:
+                        combined_channels.append({
+                            "name": ev.get('title'),
+                            "url": streams[0].get('link'),
+                            "poster": f"https://live-card-png.cricify.workers.dev/?title={slug}",
+                            "source": "Cricfy"
+                        })
+    except Exception as e: print(f"Cricfy Error: {e}")
+
+    # --- PART 2: Fetch Sportzx Data ---
+    print("Fetching Sportzx Events...")
+    try:
+        s_res = requests.get(SPORTZX_API, headers=headers, timeout=10)
+        if s_res.status_code == 200:
+            for match in s_res.json():
+                # Sirf wo matches lein jo LIVE hain ya jinke links hain
+                links = match.get('links', [])
+                if links:
+                    combined_channels.append({
+                        "name": f"{match.get('teamAName')} vs {match.get('teamBName')}",
+                        "url": links[0].get('link'),
+                        "poster": match.get('eventLogo') or match.get('teamAFlag'),
+                        "source": "Sportzx"
+                    })
+    except Exception as e: print(f"Sportzx Error: {e}")
+
+    # --- Save Combined Data ---
+    final_output = {
+        "status": "success",
+        "total": len(combined_channels),
+        "channels": combined_channels
+    }
+    with open(DATA_JSON_FILE_PATH, 'w', encoding='utf-8') as f:
+        json.dump(final_output, f, indent=4, ensure_ascii=False)
+    
+    print(f"Total {len(combined_channels)} matches saved to data.json")
 
 if __name__ == "__main__":
-    extract_sportzx_data()
-    
+    main()
+                
