@@ -1,9 +1,16 @@
 {
-    "status": "success",
-    "config": {
-        "cricfy_firebase_api_key": "AIzaSyAh9jkEU0E_UYxH0m_BKAt-uUSTiTPqhb8",
-        "cricfy_firebase_app_id": "1:963020218535:android:47ec53252c64fb3c9c7b82",
-        "cricfy_package_name": "com.cricfy.tv"
-    },
-    "version": "1.0.0"
+    "last_updated": "2026-02-23",
+    "channels_count": 2,
+    "channels": [
+        {
+            "name": "Star Sports 1",
+            "url": "STREAM_URL_1",
+            "category": "Sports"
+        },
+        {
+            "name": "Sony Ten 1",
+            "url": "STREAM_URL_2",
+            "category": "Sports"
+        }
+    ]
 }
