@@ -116,3 +116,4 @@ jobs:
           prerelease: true
           draft: false
           generate_release_notes: true
+          
