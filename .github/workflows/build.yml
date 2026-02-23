@@ -45,7 +45,6 @@ jobs:
           CRICFY_PACKAGE_NAME: ${{ secrets.CRICFY_PACKAGE_NAME }}
         run: uv run main.py
 
-      # Automation: data.json ko repository mein wapas push karne ke liye
       - name: Commit and Push data.json
         run: |
           git config --global user.name "github-actions[bot]"
@@ -58,7 +57,9 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: plugin.video.cricfy
-          path: plugin.video.cricfy* release:
+          path: plugin.video.cricfy*
+
+  release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
@@ -88,7 +89,7 @@ jobs:
 
   pre-release:
     needs: build
-    if:  ${{ ! startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download built artifact
