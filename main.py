@@ -1,70 +1,75 @@
 from pathlib import Path
 import os
 import json
-import requests  # Iske liye 'requests' library install honi chahiye
+import requests
+import base64
+# Note: Agar aapke local environment mein CryptoUtils nahi hai, 
+# toh aapko decryption ka logic yahan manually likhna padega.
 
 CURRENT_DIR = Path(__file__).resolve().parent
-CRICFY_PLUGIN_DIR = CURRENT_DIR / 'plugin.video.cricfy'
-CRICFY_PLUGIN_RESOURCES_DIR = CRICFY_PLUGIN_DIR / 'resources'
-
-CRICFY_SECRET1_FILE_PATH = CRICFY_PLUGIN_RESOURCES_DIR / 'secret1.txt'
-CRICFY_SECRET2_FILE_PATH = CRICFY_PLUGIN_RESOURCES_DIR / 'secret2.txt'
-CRICFY_PROPERTIES_FILE_PATH = CRICFY_PLUGIN_RESOURCES_DIR / 'cricfy_properties.json'
 DATA_JSON_FILE_PATH = CURRENT_DIR / 'data.json'
 
-def fetch_live_channels(api_key, app_id):
-    """
-    Cricfy API ya Firebase se live channels fetch karne ka placeholder function.
-    Yahan aapko apni actual API URL daalni hogi.
-    """
-    # Example URL: Aapko ise actual endpoint se replace karna hoga
-    # Agar Firebase use ho raha hai toh requests.get() logic wahan lagega
-    channels = [
-        {"name": "Star Sports 1", "url": "STREAM_URL_1", "category": "Sports"},
-        {"name": "Sony Ten 1", "url": "STREAM_URL_2", "category": "Sports"}
-    ]
-    return channels
+# Base URL jo aapke provider mein hai
+BASE_URL = "https://cfyhljddgbkkufh82.top"
 
 def main():
-    CRICFY_FIREBASE_API_KEY = os.getenv('CRICFY_FIREBASE_API_KEY')
-    CRICFY_FIREBASE_APP_ID = os.getenv('CRICFY_FIREBASE_APP_ID')
-    CRICFY_PACKAGE_NAME = os.getenv('CRICFY_PACKAGE_NAME')
-    CRICFY_SECRET1 = os.getenv('CRICFY_SECRET1')
-    CRICFY_SECRET2 = os.getenv('CRICFY_SECRET2')
+    # Aapke existing secrets logic (Secret1, Secret2 etc.) ko yahan rehne dein...
+    
+    print("Fetching Live Events for ELITE STREAM PRO...")
+    
+    try:
+        # 1. Sabse pehle saare live events ki list fetch karein
+        # ProviderManager ke behavior ko simulate karne ke liye API call:
+        api_url = f"{BASE_URL}/api/live_events" # Example endpoint
+        headers = {"User-Agent": "Mozilla/5.0"}
+        
+        response = requests.get(api_url, headers=headers)
+        if response.status_code != 200:
+            print("Error: Could not fetch events list")
+            return
 
-    if not all([CRICFY_FIREBASE_API_KEY, CRICFY_FIREBASE_APP_ID, CRICFY_PACKAGE_NAME]):
-        raise Exception("Required environment variables not set.")
+        # Yahan assume kar rahe hain ki response JSON mein hai
+        events_data = response.json()
+        
+        live_channels_list = []
 
-    # 1. Save Secrets
-    if CRICFY_SECRET1:
-        with open(CRICFY_SECRET1_FILE_PATH, 'w') as f: f.write(CRICFY_SECRET1)
-    if CRICFY_SECRET2:
-        with open(CRICFY_SECRET2_FILE_PATH, 'w') as f: f.write(CRICFY_SECRET2)
+        # 2. Har event ke liye slug ka use karke stream links nikalein
+        for event in events_data:
+            slug = event.get('slug')
+            if not slug: continue
+            
+            # Channel details fetch karein (slug.txt)
+            channel_url = f"{BASE_URL}/channels/{slug.lower()}.txt"
+            ch_res = requests.get(channel_url, headers=headers)
+            
+            if ch_res.status_code == 200:
+                # Yahan decrypted data process hoga
+                # Agar data encrypted hai, toh CryptoUtils ka logic yahan lagega
+                # Abhi hum direct structure save kar rahe hain
+                
+                channel_info = {
+                    "name": event.get('title', 'Unknown Event'),
+                    "category": event.get('cat', 'Sports'),
+                    "slug": slug,
+                    "poster": f"https://live-card-png.cricify.workers.dev/?title={slug}",
+                    "status": "Live"
+                }
+                live_channels_list.append(channel_info)
 
-    # 2. Save Properties
-    cricfy_properties = {
-        "cricfy_firebase_api_key": CRICFY_FIREBASE_API_KEY,
-        "cricfy_firebase_app_id": CRICFY_FIREBASE_APP_ID,
-        "cricfy_package_name": CRICFY_PACKAGE_NAME
-    }
-    with open(CRICFY_PROPERTIES_FILE_PATH, 'w') as f:
-        json.dump(cricfy_properties, f, separators=(',', ':'))
+        # 3. data.json mein save karein
+        final_output = {
+            "total_live": len(live_channels_list),
+            "channels": live_channels_list
+        }
 
-    # 3. Fetch Live Channels and Save to data.json
-    # Yahan hum wo data fetch karenge jo ELITE STREAM PRO ke liye chahiye
-    live_channels = fetch_live_channels(CRICFY_FIREBASE_API_KEY, CRICFY_FIREBASE_APP_ID)
+        with open(DATA_JSON_FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(final_output, f, indent=4, ensure_ascii=False)
 
-    final_output = {
-        "last_updated": "2026-02-23", # Aap dynamic date bhi daal sakte hain
-        "channels_count": len(live_channels),
-        "channels": live_channels
-    }
+        print(f"Success: {len(live_channels_list)} Live events saved to data.json")
 
-    with open(DATA_JSON_FILE_PATH, 'w', encoding='utf-8') as f:
-        json.dump(final_output, f, indent=4, ensure_ascii=False)
-
-    print(f"Success! {len(live_channels)} channels saved to data.json")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
-                  
+                    
