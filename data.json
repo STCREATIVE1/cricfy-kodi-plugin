@@ -1,16 +1,3 @@
 {
-    "last_updated": "2026-02-23",
-    "channels_count": 2,
-    "channels": [
-        {
-            "name": "Star Sports 1",
-            "url": "STREAM_URL_1",
-            "category": "Sports"
-        },
-        {
-            "name": "Sony Ten 1",
-            "url": "STREAM_URL_2",
-            "category": "Sports"
-        }
-    ]
+    "channels": []
 }
