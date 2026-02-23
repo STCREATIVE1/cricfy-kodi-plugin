@@ -8,7 +8,7 @@ from Crypto.Util.Padding import unpad
 
 CURRENT_DIR = Path(__file__).resolve().parent
 DATA_JSON_FILE_PATH = CURRENT_DIR / 'data.json'
-BASE_URL = "https://cfyhljddgbkkufh82.top"
+BASE_URL = "Https://cfyhskssnn99.top"
 
 def hex_to_bytes(hex_str):
     return bytes.fromhex(hex_str)
