@@ -1,0 +1,9 @@
+{
+    "status": "success",
+    "config": {
+        "cricfy_firebase_api_key": "AIzaSyAh9jkEU0E_UYxH0m_BKAt-uUSTiTPqhb8",
+        "cricfy_firebase_app_id": "1:963020218535:android:47ec53252c64fb3c9c7b82",
+        "cricfy_package_name": "com.cricfy.tv"
+    },
+    "version": "1.0.0"
+}
